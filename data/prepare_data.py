@@ -1,28 +1,3 @@
-"""
-This file is for preparing IAM/RIMES word level dataset
-Please first download IAM word level dataset and extract it in a new folder here named 'IAM'
-Ensure the following directory structure is followed:
-├── data
-|   ├── IAM
-|       └──ascii
-|           └──words.txt
-|       └──words
-|           └──a01
-|           └──a02
-|           .
-|           .
-|       └──original_partition
-|           └──te.lst, tr.lst, va1.lst, va2.lst
-|   ├── RIMES
-|       └──ground_truth_training_icdar2011.txt
-|       └──training
-|           └──lot_1
-|           └──lot_2
-|           .
-|           .
-|   └── prepare_data.py
-Then run this script to prepare the data of IAM
-"""
 import sys
 
 sys.path.extend(['..'])
@@ -33,7 +8,31 @@ import cv2
 
 def read_image(img_path, label_len, img_h=32, char_w=16):
     valid_img = True
+    img_h=32
+    char_w=16
     img = cv2.imread(img_path, 0)
+    y,x=img.shape
+    img=img[10:y-10,10:x-10]
+    iy,iw=img.shape
+    thresh= cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    blur=cv2.GaussianBlur(img,(13,13),100)
+    thresh_inv=cv2.threshold(blur,128,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)[1]
+    cnts=cv2.findContours(thresh_inv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    cnts=cnts[0] if len(cnts)==2 else cnts[1]
+    cnts=sorted(cnts,key=lambda x:cv2.boundingRect(x)[1])
+    xl,yl,xh,yh=0,0,0,0
+    for c in cnts:
+        x,y,w,h=cv2.boundingRect(c)
+        if xh==0:
+            xl,yl,xh,yh=x,y,x+w,y+h
+        else:
+            xl=min(xl,x)
+            yl=min(yl,y)
+            xh=max(xh,x+w)
+            yh=max(yh,y+h)
+                
+            # cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),5)
+    img=thresh[yl:yh,xl:xh]
     try:
         curr_h, curr_w = img.shape
         modified_w = int(curr_w * (img_h / curr_h))
@@ -63,55 +62,8 @@ def read_data(config):
     data_folder_path = config.data_folder_path
     dataset = config.dataset
 
-    if dataset == 'IAM':
-        # Extract IDs for test, train and val sets
-        with open(data_folder_path + '/original_partition/tr.lst', 'rb') as f:
-            ids = f.read().decode('unicode_escape')
-            train_ids = [i for i in ids.splitlines()]
-        with open(data_folder_path + '/original_partition/va1.lst', 'rb') as f:
-            ids = f.read().decode('unicode_escape')
-            val_ids = [i for i in ids.splitlines()]
-        with open(data_folder_path + '/original_partition/va2.lst', 'rb') as f:
-            ids = f.read().decode('unicode_escape')
-            val_ids += [i for i in ids.splitlines()]
-        with open(data_folder_path + '/original_partition/te.lst', 'rb') as f:
-            ids = f.read().decode('unicode_escape')
-            test_ids = [i for i in ids.splitlines()]
+    if dataset == 'hindi':
 
-        # Read labels and filter out the ones which just contain punctuation
-        with open(data_folder_path + '/ascii/words.txt', 'rb') as f:
-            char = f.read().decode('unicode_escape')
-            words_raw = char.splitlines()[18:]
-
-        punc_list = ['.', '', ',', '"', "'", '(', ')', ':', ';', '!']
-        # Get list of unique characters and create dictionary for mapping them to integer
-        chars = np.unique(np.concatenate([[char for char in w_i.split()[-1] if w_i.split()[-1] not in punc_list]
-                                          for w_i in words_raw]))
-        char_map = {value: idx + 1 for (idx, value) in enumerate(chars)}
-        char_map['<BLANK>'] = 0
-        num_chars = len(char_map.keys())
-
-        word_data = {}
-        for word in words_raw:
-            if word.split()[-1] not in punc_list:
-                img_id = word.split()[0]
-                label = word.split()[-1]
-
-                if partition == 'tr':
-                    partition_ids = train_ids
-                elif partition == 'vl':
-                    partition_ids = val_ids
-                else:
-                    partition_ids = test_ids
-
-                if img_id[:img_id.rfind('-')] in partition_ids:
-                    dir_data = img_id.split('-')
-                    img_path = f'{data_folder_path}/words/{dir_data[0]}/{dir_data[0]}-{dir_data[1]}/{img_id}.png'
-                    img, valid_img = read_image(img_path, len(label), img_h, char_w)
-                    if valid_img:
-                        word_data[img_id] = [[char_map[char] for char in label], img]
-
-    else:
         if partition == 'tr':
             partition_name = 'train'
         elif partition == 'vl':

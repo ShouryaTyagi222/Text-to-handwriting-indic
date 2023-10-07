@@ -31,6 +31,17 @@ logging.basicConfig(level=level, format=format_log, handlers=handlers)
 class Trainer:
     def __init__(self, config):
         self.config = config
+
+        # inserting these config values dur to not taking the updated values
+        # config.resume_training=False
+        # # config.start_epoch=12
+        # # config.num_epochs=13
+        # config.train_gen_steps=1
+        config.batch_size=32
+        config.partition='te'
+        print(config.num_epochs,config.data_file,config.partition,config.train_gen_steps)
+
+
         self.terminal_width = shutil.get_terminal_size((80, 20)).columns
 
         logging.info(f' Loading Data '.center(self.terminal_width, '*'))

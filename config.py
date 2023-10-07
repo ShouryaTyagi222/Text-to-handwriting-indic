@@ -3,23 +3,23 @@ import torch
 
 class Config:
     dataset = 'hindi'  # 'RIMES' / 'IAM'
-    data_folder_path = './hindi/'  # relative to ./data/
-    img_h = 8
+    data_folder_path = 'data/hindi'  # relative to ./data/
+    img_h = 32
     char_w = 16
-    partition = 'tr'  # 'tr' / 'vl' / 'te'
+    partition = 'te'  # 'tr' / 'vl' / 'te'
 
     batch_size = 16
-    num_epochs = 100   # number of epochs to train for
+    num_epochs = 5
     epochs_lr_decay = 100  # learning rate decay will be applied for last these many steps (should be <= num_epochs)
     resume_training = False
     start_epoch = 1
 
-    train_gen_steps = 4  # generator weights to be updated after every specified number of steps
+    train_gen_steps = 1  # generator weights to be updated after every specified number of steps
     grad_alpha = 1
     grad_balance = True
 
     data_file = f'./data/{dataset}_{partition}_data.pkl'
-    lexicon_file_name = 'Lexique383.tsv' if dataset == 'RIMES' else 'words.txt'
+    lexicon_file_name ='words.txt'
     lexicon_file = f'./data/Lexicon/{lexicon_file_name}'
     lmdb_output = f'./data/{dataset}_{partition}_data'
 
@@ -48,6 +48,6 @@ class Config:
 
     # Noise vector
     z_dim = 128
-    num_chars = 109  # change the num chars on the basis of the dataset
+    num_chars = 109
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
