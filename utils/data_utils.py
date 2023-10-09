@@ -14,8 +14,16 @@ class WordMap:
 
         enc_words, word_lens = [], []
         for word in word_list:
-            enc_words.append(torch.LongTensor([self.char_map[char] for char in word]))
-            word_lens.append(len(word))
+            prev=''
+            tlabel=[]
+            for w in word:
+                if prev=='्' and w=='र':
+                    tlabel.pop()
+                    w=prev+w
+                tlabel.append(self.char_map[w])
+                prev=w
+            enc_words.append(torch.LongTensor(tlabel))
+            word_lens.append(len(tlabel))
 
         enc_pad_words = pad_sequence(enc_words, batch_first=True, padding_value=0)
 

@@ -3,13 +3,13 @@ import torch
 
 class Config:
     dataset = 'hindi'  # 'RIMES' / 'IAM'
-    data_folder_path = 'data/hindi'  # relative to ./data/
+    data_folder_path = './data/hindi'  # relative to ./data/
     img_h = 32
     char_w = 16
-    partition = 'te'  # 'tr' / 'vl' / 'te'
+    partition = 'tr'  # 'tr = train' / 'vl = val' / 'te = test'
 
     batch_size = 16
-    num_epochs = 5
+    num_epochs = 100   # number of epochs to train for
     epochs_lr_decay = 100  # learning rate decay will be applied for last these many steps (should be <= num_epochs)
     resume_training = False
     start_epoch = 1
@@ -19,8 +19,8 @@ class Config:
     grad_balance = True
 
     data_file = f'./data/{dataset}_{partition}_data.pkl'
-    lexicon_file_name ='words.txt'
-    lexicon_file = f'./data/Lexicon/{lexicon_file_name}'
+    lexicon_file_name = 'vocab.txt'
+    lexicon_file = f'./data/{dataset}/{lexicon_file_name}'
     lmdb_output = f'./data/{dataset}_{partition}_data'
 
     architecture = 'ScrabbleGAN'
@@ -48,6 +48,6 @@ class Config:
 
     # Noise vector
     z_dim = 128
-    num_chars = 109
+    num_chars = 109  # change the num chars on the basis of the dataset
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

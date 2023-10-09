@@ -1,3 +1,4 @@
+
 import sys
 
 sys.path.extend(['..'])
@@ -7,17 +8,18 @@ import cv2
 
 
 def read_image(img_path, label_len, img_h=32, char_w=16):
+    print(img_path,end=' ')
     valid_img = True
     img_h=32
     char_w=16
-    img = cv2.imread(img_path, 0)
+    img = cv2.imread(img_path, 0) # reading the image in grayscale
     y,x=img.shape
-    img=img[10:y-10,10:x-10]
+    img=img[10:y-10,10:x-10]  # cropping the boundaries to remove noises at the boundaries
     iy,iw=img.shape
-    thresh= cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-    blur=cv2.GaussianBlur(img,(13,13),100)
-    thresh_inv=cv2.threshold(blur,128,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)[1]
-    cnts=cv2.findContours(thresh_inv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    thresh= cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] # binared image 
+    blur=cv2.GaussianBlur(img,(13,13),100) # blur the image to remove the noises
+    thresh_inv=cv2.threshold(blur,128,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)[1] # inverted image
+    cnts=cv2.findContours(thresh_inv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE) #finding contours in the image
     cnts=cnts[0] if len(cnts)==2 else cnts[1]
     cnts=sorted(cnts,key=lambda x:cv2.boundingRect(x)[1])
     xl,yl,xh,yh=0,0,0,0
@@ -26,13 +28,12 @@ def read_image(img_path, label_len, img_h=32, char_w=16):
         if xh==0:
             xl,yl,xh,yh=x,y,x+w,y+h
         else:
-            xl=min(xl,x)
+            xl=min(xl,x)  # mapping all the contours to get the main image
             yl=min(yl,y)
             xh=max(xh,x+w)
             yh=max(yh,y+h)
-                
-            # cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),5)
-    img=thresh[yl:yh,xl:xh]
+
+    img=thresh[yl:yh,xl:xh]  # cropping
     try:
         curr_h, curr_w = img.shape
         modified_w = int(curr_w * (img_h / curr_h))
@@ -44,6 +45,7 @@ def read_image(img_path, label_len, img_h=32, char_w=16):
             # Resize image so height = img_h and width = char_w * label_len
             img_w = label_len * char_w
             img = cv2.resize(img, (img_w, img_h))
+        print('done')
 
     except AttributeError:
         valid_img = False
@@ -80,6 +82,7 @@ def read_data(config):
         # Get list of unique characters and create dictionary for mapping them to integer
         chars = np.unique(np.concatenate([[char for char in w_i.split()[-1]] for w_i in words_raw]))
         char_map = {value: idx + 1 for (idx, value) in enumerate(chars)}
+        char_map['्र']=109
         char_map['<BLANK>'] = 0
         num_chars = len(char_map.keys())
 
@@ -96,7 +99,15 @@ def read_data(config):
             img_id = img_path.split('/')[-1].split('.')[0]
             if valid_img:
                 try:
-                    word_data[img_id] = [[char_map[char] for char in label], img]
+                    prev=''
+                    tlabel=[]
+                    for word in label:
+                        if prev=='्' and word=='र':
+                            tlabel.pop()
+                            word=prev+word
+                        tlabel.append(char_map[word])
+                        prev=word
+                    word_data[img_id] = [tlabel, img]
                 except KeyError:
                     pass
 
@@ -104,7 +115,8 @@ def read_data(config):
     print(f'Number of unique characters = {num_chars}')
 
     # Save the data
-    with open(f'{out_name[out_name.rfind("/")+1:]}', 'wb') as f:
+    print('saving at ',out_name)
+    with open(out_name, 'wb') as f:
         pkl.dump({'word_data': word_data,
                   'char_map': char_map,
                   'num_chars': num_chars}, f, protocol=pkl.HIGHEST_PROTOCOL)
