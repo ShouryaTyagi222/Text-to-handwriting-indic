@@ -7,18 +7,20 @@ and keep them in the data `/data/` directory as shown below:
 ```
 Repo Directory
 ├── data
-|   ├── hindi
-|       └──vocab.txt
-|       └──train/
+|   ├── hindi                       # Name According to the name of the dataset in config.py eg. hindi,tamil, etc.
+|       └──train/                   # Training Images
 |       └──test/
 |       └──val/
-|       └──train.txt/
-|       └──test.txt/
-|       └──val.txt/
+|       └──train.txt                # Text file for training data
+|       └──test.txt
+|       └──val.txt                  
+|       └──vocab.txt                # Lexicon
 |   └──Here will come the generated char_map for the hindi by running the prepare_data.py follow the steps.
 ```
-2. Modify the `/config.py` file to change dataset, model architecture , image height, etc. 
-The default parameters indicate the ones used in the paper.
+
+2. Modify the `/config.py` file to change :
+`dataset`, `num_chars`, `start_epoch`, `train_gen_steps`,  `num_epochs`, `batch_size`, `resume_training` , `partition` and File_Structure
+
 
 3. To Prepare Data for Training, run:
     ```bash
@@ -34,44 +36,19 @@ The default parameters indicate the ones used in the paper.
    after every epoch. Tensorboard logging has also been enabled.  
    And The model checkpoint will be saved in every 5 epochs.
 
-## Steps for generating new images
-```
-# import required packages
-from config import Config
-import pickle as pkl
-from generate_images import ImgGenerator
-import matplotlib.pyplot as plt
-import torch
-import numpy as np
+## Generating new image
+To generate new image run `run_inference.py` , where you can change the 
 
-dataset='hindi'
-config = Config
-config.num_chars = 109
+1. path to the model.
+2. path to the data file.
+3. word for which you want to generate image.
+4. noise in the generated image.
 
-with open('./data/hindi_tr_data.pkl', 'rb') as f:
-   char_map = pkl.load(f)
-char_map=char_map['char_map']
-generator = ImgGenerator(checkpt_path=f'./weights/model_checkpoint_epoch_45.pth.tar',  # path to the saved model
-                         config=config, char_map=char_map)
-z_dist = torch.distributions.Normal(loc=0, scale=1.)
+## Use the Recogniser model
+To use the recogniser model run `run_recogniser.py `. In it you have to provide the path of the image and the path of the model
 
-noise_seed = 0 # min:0, max:100, step:1
-
-torch.manual_seed(noise_seed)
-z = z_dist.sample([128])
-
-# specific words, same style
-sentences = ["सुनकर"]  # input image
-for word_list in sentences:
-    word_list = word_list.split(' ')
-    generated_imgs, _, word_labels = generator.generate(word_list=word_list)
-    sentence_img = []
-    for label, img in zip(word_labels, generated_imgs):
-        img = img[:, img.sum(0) < 31.5]
-        sentence_img.append(img)
-        sentence_img.append(np.ones((img.shape[0], 15)))
-    sentence_img = np.hstack(sentence_img)
-    plt.imshow(sentence_img, cmap='gray')
-    plt.axis('off')
-    plt.show()                      
-```
+## To produce images of many words Using the Generator
+To Produce images of many words run `produce_images.py ` in this you have to provide :
+1. txt file which consists of all the words separated by lines.
+2. path to the output folder.
+3. path to the generator model.

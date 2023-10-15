@@ -5,10 +5,10 @@ sys.path.extend(['..'])
 import numpy as np
 import pickle as pkl
 import cv2
+from tqdm import tqdm
 
 
 def read_image(img_path, label_len, img_h=32, char_w=16):
-    print(img_path,end=' ')
     valid_img = True
     img_h=32
     char_w=16
@@ -45,7 +45,6 @@ def read_image(img_path, label_len, img_h=32, char_w=16):
             # Resize image so height = img_h and width = char_w * label_len
             img_w = label_len * char_w
             img = cv2.resize(img, (img_w, img_h))
-        print('done')
 
     except AttributeError:
         valid_img = False
@@ -64,50 +63,44 @@ def read_data(config):
     data_folder_path = config.data_folder_path
     dataset = config.dataset
 
-    if dataset == 'hindi':
 
-        if partition == 'tr':
-            partition_name = 'train'
-        elif partition == 'vl':
-            partition_name = 'val'
-        else:
-            partition_name = 'test'
+    if partition == 'tr':
+        partition_names = ['train']
+    elif partition == 'vl':
+        partition_names = ['val']
+    elif partition == 'all':
+        partition_names = ['train','test','val']
+    else:
+        partition_names = ['test']
 
-        # create char_map using training labels
-        with open(f'{data_folder_path}/train.txt', 'r') as f:
-            ids = f.read()
-            partition_ids = [i.split()[0] for i in ids.splitlines() if len(i) > 1]
-            words_raw = [i.split()[1] for i in ids.splitlines() if len(i) > 1]
+    # create char_map using training labels
+    with open(f'{data_folder_path}/train.txt', 'r') as f:
+        ids = f.read()
+        partition_ids = [i.split()[0] for i in ids.splitlines() if len(i) > 1]
+        words_raw = [i.split()[1] for i in ids.splitlines() if len(i) > 1]
 
-        # Get list of unique characters and create dictionary for mapping them to integer
-        chars = np.unique(np.concatenate([[char for char in w_i.split()[-1]] for w_i in words_raw]))
-        char_map = {value: idx + 1 for (idx, value) in enumerate(chars)}
-        char_map['्र']=109
-        char_map['<BLANK>'] = 0
-        num_chars = len(char_map.keys())
+    # Get list of unique characters and create dictionary for mapping them to integer
+    chars = np.unique(np.concatenate([[char for char in w_i.split()[-1]] for w_i in words_raw]))
+    char_map = {value: idx + 1 for (idx, value) in enumerate(chars)}
+    char_map['<BLANK>'] = 0
+    num_chars = len(char_map.keys())
 
-        # Extract IDs for required set
+    # Extract IDs for required set
+    word_data = {}
+    for partition_name in partition_names:
         with open(f'{data_folder_path}/{partition_name}.txt', 'r') as f:
             ids = f.read()
             partition_ids = [i.split()[0] for i in ids.splitlines() if len(i) > 1]
             words_raw = [i.split()[1] for i in ids.splitlines() if len(i) > 1]
 
-        word_data = {}
-        for img_path, label in zip(partition_ids, words_raw):
+        
+        for img_path, label in tqdm(zip(partition_ids, words_raw)):
             img_path = f'{data_folder_path}/{partition_name}/{img_path}'
             img, valid_img = read_image(img_path, len(label), img_h, char_w)
             img_id = img_path.split('/')[-1].split('.')[0]
             if valid_img:
                 try:
-                    prev=''
-                    tlabel=[]
-                    for word in label:
-                        if prev=='्' and word=='र':
-                            tlabel.pop()
-                            word=prev+word
-                        tlabel.append(char_map[word])
-                        prev=word
-                    word_data[img_id] = [tlabel, img]
+                    word_data[partition_name[:2]+'_'+img_id] = [[char_map[char] for char in label], img]
                 except KeyError:
                     pass
 
