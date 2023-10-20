@@ -6,9 +6,9 @@ class Config:
     data_folder_path = f'./data/{dataset}' 
     img_h = 32
     char_w = 16
-    partition = 'all'  # 'tr = train' / 'vl = val' / 'te = test' / all = train + test + val
+    partition = 'te'  # 'tr = train' / 'vl = val' / 'te = test' / all = train + test + val
 
-    batch_size = 16
+    batch_size = 32
     num_epochs = 100   # number of epochs to train for
     epochs_lr_decay = 100  # learning rate decay will be applied for last these many steps (should be <= num_epochs)
     resume_training = False
