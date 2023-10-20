@@ -8,35 +8,37 @@ import cv2
 from tqdm import tqdm
 
 
-def read_image(img_path, label_len, img_h=32, char_w=16):
+def read_image(img_path, label_len, img_h=64, char_w=32):
     valid_img = True
-    img_h=32
-    char_w=16
-    img = cv2.imread(img_path, 0) # reading the image in grayscale
-    y,x=img.shape
-    img=img[10:y-10,10:x-10]  # cropping the boundaries to remove noises at the boundaries
-    iy,iw=img.shape
-    thresh= cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] # binared image 
-    blur=cv2.GaussianBlur(img,(13,13),100) # blur the image to remove the noises
-    thresh_inv=cv2.threshold(blur,128,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)[1] # inverted image
-    cnts=cv2.findContours(thresh_inv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE) #finding contours in the image
-    cnts=cnts[0] if len(cnts)==2 else cnts[1]
-    cnts=sorted(cnts,key=lambda x:cv2.boundingRect(x)[1])
-    xl,yl,xh,yh=0,0,0,0
-    for c in cnts:
-        x,y,w,h=cv2.boundingRect(c)
-        if xh==0:
-            xl,yl,xh,yh=x,y,x+w,y+h
-        else:
-            xl=min(xl,x)  # mapping all the contours to get the main image
-            yl=min(yl,y)
-            xh=max(xh,x+w)
-            yh=max(yh,y+h)
-
-    img=thresh[yl:yh,xl:xh]  # cropping
+    
     try:
+        img = cv2.imread(img_path, 0) # reading the image in grayscale
+        y,x=img.shape
+        img=img[5:y-10,10:x-10]  # cropping the boundaries to remove noises at the boundaries
+        iy,iw=img.shape
+        thresh= cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] # binared image 
+        blur=cv2.GaussianBlur(img,(13,13),100) # blur the image to remove the noises
+        thresh_inv=cv2.threshold(blur,128,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)[1] # inverted image
+        cnts=cv2.findContours(thresh_inv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE) #finding contours in the image
+        cnts=cnts[0] if len(cnts)==2 else cnts[1]
+        cnts=sorted(cnts,key=lambda x:cv2.boundingRect(x)[1])
+        xl,yl,xh,yh=0,0,0,0
+        for c in cnts:
+            x,y,w,h=cv2.boundingRect(c)
+            if xh==0:
+                xl,yl,xh,yh=x,y,x+w,y+h
+            else:
+                xl=min(xl,x)  # mapping all the contours to get the main image
+                yl=min(yl,y)
+                xh=max(xh,x+w)
+                yh=max(yh,y+h)
+
+        img=img[yl:yh,xl:xh]
         curr_h, curr_w = img.shape
         modified_w = int(curr_w * (img_h / curr_h))
+        img=cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        kernel = np.ones((2, 2), np.uint8)
+        img = cv2.erode(img, kernel, iterations=5)
 
         # Remove outliers
         if ((modified_w / label_len) < (char_w / 3)) | ((modified_w / label_len) > (3 * char_w)):
@@ -45,9 +47,11 @@ def read_image(img_path, label_len, img_h=32, char_w=16):
             # Resize image so height = img_h and width = char_w * label_len
             img_w = label_len * char_w
             img = cv2.resize(img, (img_w, img_h))
+            img=cv2.threshold(img, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
     except AttributeError:
         valid_img = False
+        print('Error at',img_path)
 
     return img, valid_img
 
